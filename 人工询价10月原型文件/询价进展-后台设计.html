@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>询价单管理 · 询价进展管控（优化设计稿）</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:#eef1f6; color:#1f2d3d; font-size:13px; padding:16px;
+  }
+  .page { max-width:1440px; margin:0 auto; }
+
+  /* ===== 顶部标题 ===== */
+  .page-title { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .page-title h1 { font-size:18px; font-weight:600; color:#1f2d3d; }
+  .page-title .tag { background:#e8f1ff; color:#2e6be6; font-size:12px; padding:2px 8px; border-radius:4px; }
+
+  /* ===== 筛选栏 ===== */
+  .filter-bar { background:#fff; border-radius:8px; padding:12px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px; box-shadow:0 1px 2px rgba(31,45,61,.06); }
+  .filter-item { display:flex; align-items:center; gap:6px; }
+  .filter-item label { color:#5f6b7d; white-space:nowrap; }
+  .filter-item input, .filter-item select {
+    border:1px solid #d8dee8; border-radius:6px; padding:6px 10px; font-size:13px; color:#1f2d3d; min-width:140px; background:#fff; outline:none;
+  }
+  .filter-item input:focus, .filter-item select:focus { border-color:#2e6be6; }
+  .btn-search { background:#2e6be6; color:#fff; border:none; border-radius:6px; padding:7px 22px; cursor:pointer; font-size:13px; }
+
+  /* ===== 操作按钮 ===== */
+  .action-bar { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
+  .btn { border:none; border-radius:6px; padding:7px 14px; font-size:13px; cursor:pointer; color:#fff; background:#2e6be6; }
+  .btn.ghost { background:#fff; color:#2e6be6; border:1px solid #2e6be6; }
+  .btn.small { padding:4px 10px; font-size:12px; }
+
+  /* ===== 阶段配比条 ===== */
+  .stage-config { background:#fff; border-radius:8px; padding:12px 16px; margin-bottom:10px; box-shadow:0 1px 2px rgba(31,45,61,.06); display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .stage-config .label { font-weight:600; color:#1f2d3d; }
+  .stage-chip { display:flex; align-items:center; gap:6px; padding:5px 12px; border-radius:16px; font-size:12px; }
+  .stage-chip b { font-size:13px; }
+  .sc1 { background:#e8f1ff; color:#2e6be6; }
+  .sc2 { background:#e6f7f1; color:#0f9d6c; }
+  .sc3 { background:#f3edff; color:#7c4ddb; }
+  .stage-config .total { margin-left:auto; color:#5f6b7d; }
+  .stage-config .total b { color:#e2494f; font-size:15px; }
+  .stage-config .edit { color:#2e6be6; cursor:pointer; font-size:12px; }
+
+  /* ===== KPI ===== */
+  .kpi-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+  .kpi { background:#fff; border-radius:8px; padding:12px 16px; box-shadow:0 1px 2px rgba(31,45,61,.06); }
+  .kpi .k { color:#5f6b7d; font-size:12px; margin-bottom:4px; }
+  .kpi .v { font-size:20px; font-weight:600; }
+  .kpi .s { font-size:11px; color:#98a2b3; margin-top:2px; }
+  .v.blue{color:#2e6be6}.v.orange{color:#f59e0b}.v.red{color:#e2494f}.v.green{color:#0f9d6c}
+
+  /* ===== 表格 ===== */
+  .table-wrap { background:#fff; border-radius:8px; box-shadow:0 1px 2px rgba(31,45,61,.06); overflow:auto; }
+  table { width:100%; border-collapse:collapse; min-width:1180px; }
+  thead th { background:#f5f7fa; color:#5f6b7d; font-weight:500; text-align:left; padding:10px 12px; white-space:nowrap; border-bottom:1px solid #e6eaf1; }
+  tbody td { padding:12px; border-bottom:1px solid #f0f3f8; vertical-align:middle; white-space:nowrap; }
+  tbody tr:hover { background:#f8faff; cursor:pointer; }
+  .order-no { color:#2e6be6; }
+  .status-chip { display:inline-block; padding:2px 8px; border-radius:4px; font-size:12px; }
+  .st-pending { background:#fff7e8; color:#c47a08; }
+  .st-doing   { background:#e8f1ff; color:#2e6be6; }
+  .st-review  { background:#f3edff; color:#7c4ddb; }
+  .st-done    { background:#e6f7f1; color:#0f9d6c; }
+  .st-over    { background:#ffecec; color:#e2494f; }
+
+  /* ===== 进展列 ===== */
+  .prog { min-width:230px; }
+  .prog-bar { display:flex; height:10px; border-radius:5px; overflow:hidden; background:#edf0f5; }
+  .seg { position:relative; height:100%; }
+  .seg + .seg { border-left:2px solid #fff; }
+  .seg .fill { position:absolute; left:0; top:0; bottom:0; }
+  .seg1 { width:7.4%; } .seg2 { width:74.1%; } .seg3 { width:18.5%; }
+  .fill-done { background:#0f9d6c; }
+  .fill-run  { background:#2e6be6; }
+  .fill-warn { background:#f59e0b; }
+  .fill-over { background:#e2494f; }
+  .fill-idle { background:#cfd6e0; }
+  .prog-labels { display:flex; gap:6px; margin-top:5px; font-size:11px; color:#5f6b7d; }
+  .prog-labels span { white-space:nowrap; }
+  .dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:3px; vertical-align:middle; }
+  .d-done{background:#0f9d6c}.d-run{background:#2e6be6}.d-warn{background:#f59e0b}.d-over{background:#e2494f}.d-idle{background:#cfd6e0}
+  .remain { font-weight:600; }
+  .remain.ok{color:#0f9d6c}.remain.warn{color:#f59e0b}.remain.over{color:#e2494f}
+
+  .op a { color:#2e6be6; text-decoration:none; margin-right:8px; font-size:12px; cursor:pointer; }
+  .op a.danger { color:#e2494f; }
+  .op a.primary { display:inline-block; background:#2e6be6; color:#fff; padding:3px 10px; border-radius:4px; font-weight:500; }
+  .op a.primary:hover { background:#1f56cc; }
+
+  /* ===== 图例 ===== */
+  .legend { display:flex; gap:18px; padding:10px 4px; color:#5f6b7d; font-size:12px; flex-wrap:wrap; }
+
+  /* ===== 抽屉 ===== */
+  .overlay { position:fixed; inset:0; background:rgba(15,23,42,.4); opacity:0; pointer-events:none; transition:.2s; z-index:10; }
+  .drawer { position:fixed; top:0; right:-520px; width:500px; height:100vh; background:#fff; z-index:11; transition:right .25s; box-shadow:-4px 0 16px rgba(15,23,42,.12); display:flex; flex-direction:column; }
+  body.drawer-open .overlay { opacity:1; pointer-events:auto; }
+  body.drawer-open .drawer { right:0; }
+  .drawer-head { padding:16px 20px; border-bottom:1px solid #eef1f6; display:flex; align-items:center; gap:10px; }
+  .drawer-head h2 { font-size:15px; font-weight:600; }
+  .drawer-head .close { margin-left:auto; cursor:pointer; color:#98a2b3; font-size:18px; border:none; background:none; }
+  .drawer-body { padding:16px 20px; overflow-y:auto; flex:1; }
+
+  .d-summary { padding:10px 14px; margin-bottom:14px; }
+  .d-summary.warn { background:#fffdf5; border-color:#fbd38d; }
+  .d-summary.over { background:#fffafa; border-color:#f5b5b5; }
+  .d-summary.done { background:#f4fbf8; border-color:#bfe8d5; }
+  .d-summary .line { display:flex; flex-wrap:wrap; gap:4px 16px; font-size:12px; color:#1f2d3d; padding:3px 0; align-items:baseline; }
+  .d-summary .line i { font-style:normal; color:#98a2b3; margin-right:4px; }
+  .d-summary .line b { font-weight:600; }
+  .d-summary .line.prog { border-top:1px dashed #e6eaf1; margin-top:4px; padding-top:6px; }
+
+  /* ===== 场景切换（演示用） ===== */
+  .scene-tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+  .scene-tab { border:1px solid #d8dee8; background:#fff; color:#5f6b7d; border-radius:14px; padding:4px 12px; font-size:12px; cursor:pointer; }
+  .scene-tab.active { background:#2e6be6; border-color:#2e6be6; color:#fff; }
+  .scene-tab.active.t-over { background:#e2494f; border-color:#e2494f; }
+  .scene-tab.active.t-warn { background:#f59e0b; border-color:#f59e0b; }
+  .scene-tab.active.t-done { background:#0f9d6c; border-color:#0f9d6c; }
+  .scene-hint { font-size:11px; color:#98a2b3; margin-bottom:10px; }
+
+  .stage-card { border:1px solid #e6eaf1; border-radius:8px; padding:12px 14px; margin-bottom:10px; }
+  .stage-card.warn { border-color:#fbd38d; background:#fffdf5; }
+  .stage-card.over { border-color:#f5b5b5; background:#fffafa; }
+  .stage-card.run { border-color:#b8d4f7; background:#f8faff; }
+  .stage-card.done { border-color:#bfe8d5; }
+  .stage-card .sc-time { margin-top:8px; font-size:11px; color:#5f6b7d; line-height:1.7; border-top:1px dashed #e6eaf1; padding-top:8px; }
+  .stage-card .sc-time .t-over { color:#e2494f; font-weight:600; }
+  .sc-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .sc-head .name { font-weight:600; }
+  .sc-head .chip { margin-left:auto; }
+  .sc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:8px; }
+  .sc-grid .cell .k { font-size:11px; color:#98a2b3; }
+  .sc-grid .cell .v { font-size:14px; font-weight:600; margin-top:2px; }
+  .sc-bar { height:8px; border-radius:4px; background:#edf0f5; overflow:hidden; }
+  .sc-bar .f { height:100%; border-radius:4px; }
+  .sc-meta { margin-top:8px; font-size:11px; color:#98a2b3; line-height:1.7; }
+  .f-done{background:#0f9d6c}.f-run{background:#2e6be6}.f-warn{background:#f59e0b}.f-over{background:#e2494f}.f-idle{background:#cfd6e0}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-title">
+    <h1>询价单管理</h1>
+    <span class="tag">本期范围 · 侧抽屉 V1（列表进度条本期不做）</span>
+  </div>
+
+  <!-- 筛选栏 -->
+  <div class="filter-bar">
+    <div class="filter-item"><label>询价单号</label><input placeholder="请输入询价单号"></div>
+    <div class="filter-item"><label>首响人</label><select><option>请选择首响人</option></select></div>
+    <div class="filter-item"><label>询价师</label><select><option>请选择询价师</option></select></div>
+    <div class="filter-item"><label>询价单状态</label><select><option>请选择询价单状态</option></select></div>
+    <div class="filter-item"><label>询价进展</label><select><option>全部阶段</option><option>阶段1 分配</option><option>阶段2 作业</option><option>阶段3 审核推送</option></select></div>
+    <button class="btn-search">搜索</button>
+  </div>
+
+  <!-- 操作按钮 -->
+  <div class="action-bar">
+    <button class="btn">批量首询分配 ⓘ</button>
+    <button class="btn">新增询价单</button>
+    <button class="btn">下询价单</button>
+    <button class="btn">导出Excel</button>
+    <button class="btn">变更询价师</button>
+    <button class="btn">变更首响人</button>
+  </div>
+
+  <!-- 阶段配比（27h 拆分，可配置） -->
+  <div class="stage-config">
+    <span class="label">询价进展 · 27h 阶段配比</span>
+    <span class="stage-chip sc1"><b>1 询价单分配</b> 2.0h</span>
+    <span class="stage-chip sc2"><b>2 询价师作业</b> 20.0h</span>
+    <span class="stage-chip sc3"><b>3 组长审核推送</b> 5.0h</span>
+    <span class="total">合计 <b>27.0h</b>（3 工作日 × 9h）</span>
+    <span class="edit">⚙ 配置</span>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-strip">
+    <div class="kpi"><div class="k">进行中订单</div><div class="v blue">12</div><div class="s">含分配中 2 / 作业中 7 / 审核中 3</div></div>
+    <div class="kpi"><div class="k">阶段预警（耗用 ≥ 80%）</div><div class="v orange">3</div><div class="s">自动通知阶段负责人</div></div>
+    <div class="kpi"><div class="k">阶段超时</div><div class="v red">2</div><div class="s">已生成超时工单</div></div>
+    <div class="kpi"><div class="k">今日平均响应</div><div class="v green">14.2h</div><div class="s">承诺预算 27.0h · 达标率 91%</div></div>
+  </div>
+
+  <!-- 列表 -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px"></th>
+          <th>询价单号</th>
+          <th>公司名称</th>
+          <th>询价时间</th>
+          <th>预计回复时间</th>
+          <th>询价师</th>
+          <th>询价单状态</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="legend">
+    <span><i class="dot d-done"></i>阶段完成</span>
+    <span><i class="dot d-run"></i>进行中（正常）</span>
+    <span><i class="dot d-warn"></i>预警（阶段耗用 ≥ 80%）</span>
+    <span><i class="dot d-over"></i>超时（阶段耗用 &gt; 预算）</span>
+    <span><i class="dot d-idle"></i>未开始</span>
+    <span>· 计时口径：工作日 09:00–18:00，每日 9h，节假日/周末剔除，精度 0.1h</span>
+  </div>
+</div>
+
+<!-- 遮罩 + 抽屉 -->
+<div class="overlay" onclick="closeDrawer()"></div>
+<div class="drawer">
+  <div class="drawer-head">
+    <h2 id="dTitle">询价进展详情</h2>
+    <button class="close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="dBody"></div>
+</div>
+
+<script>
+const STAGES = [
+  { key:"s1", name:"1 询价单分配",   budget:2.0,  owner:"首响人（调度）" },
+  { key:"s2", name:"2 询价师作业",   budget:20.0, owner:"询价师" },
+  { key:"s3", name:"3 组长审核推送", budget:5.0,  owner:"询价组长" }
+];
+
+// 列表数据（化名：张小刚 / 李小明 / 王小花 / 张小强 / 李小华 …）
+const rows = [
+  { no:"XJ2026100815033258", company:"GLCLON-1-090AE1", askTime:"10-08 15:19", estTime:"10-13 23:59", master:"张小刚", status:"待处理", st:"st-pending" },
+  { no:"XJ2026093015125470", company:"测试", askTime:"09-30 01:12", estTime:"10-03 23:59", master:"李小明", status:"处理中", st:"st-doing" },
+  { no:"XJ2026093013139867", company:"湖北文件解析093001", askTime:"09-30 11:31", estTime:"10-03 23:59", master:"王小花", status:"处理中", st:"st-doing" },
+  { no:"XJ2026092810338236", company:"般衣0228-02", askTime:"09-28 10:33", estTime:"10-04 23:59", master:"张小强", status:"待审核", st:"st-review" },
+  { no:"XJ2026092510295469", company:"测试清单解析092601", askTime:"09-25 12:56", estTime:"09-28 23:59", master:"王小花", status:"已核对", st:"st-done" },
+  { no:"XJ2026092510195149", company:"测试询价022801", askTime:"09-25 10:19", estTime:"09-28 23:59", master:"王小花", status:"处理中", st:"st-over" },
+  { no:"XJ2026092604501926", company:"罗莉源0328-2", askTime:"09-26 12:04", estTime:"09-29 23:59", master:"李小华", status:"处理中", st:"st-doing" }
+];
+
+const cls = { done:"fill-done", run:"fill-run", warn:"fill-warn", over:"fill-over", idle:"fill-idle" };
+const dot = { done:"d-done", run:"d-run", warn:"d-warn", over:"d-over", idle:"d-idle" };
+const chip = { done:["st-done","已完成"], run:["st-doing","进行中"], warn:["st-pending","预警"], over:["st-over","超时"], idle:["","未开始"] };
+const segCls = ["seg1","seg2","seg3"];
+
+function renderRows(){
+  const tb = document.getElementById("tbody");
+  tb.innerHTML = rows.map((r,i)=>`
+    <tr onclick="openDrawer(${i})">
+      <td><input type="checkbox" onclick="event.stopPropagation()"></td>
+      <td class="order-no">${r.no}</td>
+      <td>${r.company}</td>
+      <td>${r.askTime}</td>
+      <td>${r.estTime}</td>
+      <td>${r.master}</td>
+      <td><span class="status-chip ${r.st}">${r.status}</span></td>
+      <td class="op" onclick="event.stopPropagation()"><a href="javascript:void(0)" class="primary" onclick="openDrawer(${i})">查看进度</a><a href="javascript:void(0)">催办</a><a href="javascript:void(0)" class="danger">无效</a></td>
+    </tr>`).join("");
+}
+
+/* ===== 抽屉示例场景数据 =====
+   st: done 完成 / run 进行中 / warn 预警 / over 超时 / idle 未开始
+   t: { enter 进入时刻, finish 完成时刻, overAt 超时时刻 }
+   本期不做：超时工单 GC-xxx 编号、升级通知对象等描述，仅展示超时状态与时长。 */
+const SCENES = [
+  { id:"normal", label:"作业进行中", type:"normal",
+    order:{ no:"XJ2026100909123401", company:"湖北文件解析093001", ask:"10-09 09:12", deadline:"10-13 09:12", master:"王小花", status:"处理中", stc:"st-doing" },
+    stages:[
+      { st:"done", used:1.2, t:{enter:"10-09 09:12", finish:"10-09 10:24"} },
+      { st:"run",  used:12.3, t:{enter:"10-09 10:24"} },
+      { st:"idle", used:0 }
+    ] },
+  { id:"warn", label:"阶段预警", type:"warn",
+    order:{ no:"XJ2026100815302214", company:"般衣0228-02", ask:"10-08 15:30", deadline:"10-13 16:30", master:"张小强", status:"处理中", stc:"st-doing" },
+    stages:[
+      { st:"done", used:1.8, t:{enter:"10-08 15:30", finish:"10-08 17:18"} },
+      { st:"warn", used:18.5, t:{enter:"10-08 17:18", warnAt:"10-10 09:30 达 80%（16h）"} },
+      { st:"idle", used:0 }
+    ] },
+  { id:"s1over", label:"分配超时", type:"over",
+    order:{ no:"XJ2026101209004412", company:"长葛信泰0805-3", ask:"10-12 09:00", deadline:"10-15 09:00", master:"—（未分配）", status:"待处理", stc:"st-pending" },
+    stages:[
+      { st:"over", used:3.4, t:{enter:"10-12 09:00", overAt:"10-12 11:00"} },
+      { st:"idle", used:0 },
+      { st:"idle", used:0 }
+    ] },
+  { id:"s2over", label:"作业超时", type:"over",
+    order:{ no:"XJ2026100509338821", company:"测试询价022801", ask:"10-05 09:33", deadline:"10-09 09:33", master:"王小花", status:"处理中", stc:"st-over" },
+    stages:[
+      { st:"done", used:1.5, t:{enter:"10-05 09:33", finish:"10-05 11:03"} },
+      { st:"over", used:26.0, t:{enter:"10-05 11:03", warnAt:"10-07 09:00 达 80%（16h）", overAt:"10-08 09:00"} },
+      { st:"idle", used:0 }
+    ] },
+  { id:"s3normal", label:"审核进行中", type:"normal",
+    order:{ no:"XJ2026100708557410", company:"般衣0228-02", ask:"10-07 08:55", deadline:"10-12 08:55", master:"张小强", status:"待审核", stc:"st-review" },
+    stages:[
+      { st:"done", used:1.5, t:{enter:"10-07 08:55", finish:"10-07 10:25"} },
+      { st:"done", used:19.2, t:{enter:"10-07 10:25", finish:"10-09 17:00"} },
+      { st:"run",  used:0.8, t:{enter:"10-09 17:00"} }
+    ] },
+  { id:"s3over", label:"审核超时", type:"over",
+    order:{ no:"XJ2026100514210036", company:"罗莉源0328-2", ask:"10-05 14:21", deadline:"10-09 14:21", master:"李小华", status:"待审核", stc:"st-over" },
+    stages:[
+      { st:"done", used:0.9, t:{enter:"10-05 14:21", finish:"10-05 15:15"} },
+      { st:"done", used:19.8, t:{enter:"10-05 15:15", finish:"10-08 09:00"} },
+      { st:"over", used:6.8, t:{enter:"10-08 09:00", warnAt:"10-09 14:00 达 80%（4h）", overAt:"10-09 16:00"} }
+    ] },
+  { id:"done", label:"按期完结", type:"done",
+    order:{ no:"XJ2026092510295469", company:"测试清单解析092601", ask:"09-25 12:56", deadline:"09-28 23:59", master:"王小花", status:"已核对", stc:"st-done" },
+    stages:[
+      { st:"done", used:1.1, t:{enter:"09-25 12:56", finish:"09-25 14:02"} },
+      { st:"done", used:17.6, t:{enter:"09-25 14:02", finish:"09-28 10:20"} },
+      { st:"done", used:3.2, t:{enter:"09-28 10:20", finish:"09-28 13:32"} }
+    ] },
+  { id:"doneOver", label:"超时完结", type:"over",
+    order:{ no:"XJ2026092816092210", company:"测试询价092803", ask:"09-28 16:09", deadline:"10-09 16:09", master:"李小明", status:"已核对", stc:"st-over" },
+    stages:[
+      { st:"done", used:2.4, t:{enter:"09-28 16:09", finish:"09-29 09:33", overAt:"09-29 09:00"} },
+      { st:"done", used:26.0, t:{enter:"09-29 09:33", warnAt:"10-02 09:00", overAt:"10-05 09:00"} },
+      { st:"done", used:3.0, t:{enter:"10-09 09:00", finish:"10-09 12:00"} }
+    ] }
+];
+
+// 行点击 → 映射到不同场景（覆盖 7 种，超时完结仅在场景 tab 中查看）
+const rowScene = ["s1over","normal","warn","s3normal","done","s2over","s3over"];
+
+function openDrawer(i){
+  renderScene(rowScene[i] || "normal");
+  document.body.classList.add("drawer-open");
+}
+
+function renderScene(sceneId){
+  const sc = SCENES.find(s=>s.id===sceneId);
+  const o = sc.order;
+  document.getElementById("dTitle").textContent = o.no;
+
+  const tabs = `<div class="scene-tabs">` + SCENES.map(s=>{
+    const t = s.type==="over" ? "t-over" : s.type==="warn" ? "t-warn" : s.type==="done" ? "t-done" : "";
+    return `<button class="scene-tab ${s.id===sceneId?"active "+t:""}" onclick="renderScene('${s.id}')">${s.label}</button>`;
+  }).join("") + `</div>
+  <div class="scene-hint">示例场景切换（演示各状态样式，正式环境无此行）</div>`;
+
+  const usedTotal = sc.stages.reduce((a,s)=>a+s.used,0);
+  const remain = 27 - usedTotal;
+  const sumCls = sc.type==="over" ? "over" : sc.type==="warn" ? "warn" : sc.type==="done" ? "done" : "";
+  
+  const cards = STAGES.map((s,j)=>{
+    const sg = sc.stages[j];
+    const st = sg.st;
+    const pct = st==="done"?100:st==="idle"?0:Math.min(100,sg.used/s.budget*100);
+    const sRemain = s.budget - sg.used;
+    const c = st==="warn"?"warn":st==="over"?"over":st==="done"?"done":st==="run"?"run":"";
+    const times = st==="idle"
+      ? `未开始（进入本阶段后开始计时）`
+      : `进入：${sg.t.enter}`
+        + (sg.t.finish ? `　完成：${sg.t.finish}` : ``)
+        + (sg.t.warnAt ? `<br>预警时刻：${sg.t.warnAt}` : ``)
+        + (sg.t.overAt ? `　<span class="t-over">超时时刻：${sg.t.overAt}</span>` : ``);
+    return `<div class="stage-card ${c}">
+      <div class="sc-head">
+        <span class="name">${s.name}</span>
+        <span class="chip"><span class="status-chip ${chip[st][0]||"st-pending"}">${chip[st][1]}</span></span>
+      </div>
+      <div class="sc-grid">
+        <div class="cell"><div class="k">阶段预算</div><div class="v">${s.budget.toFixed(1)}h</div></div>
+        <div class="cell"><div class="k">已耗用</div><div class="v">${sg.used.toFixed(1)}h</div></div>
+        <div class="cell"><div class="k">剩余</div><div class="v" style="color:${sRemain<0?"#e2494f":sRemain<=s.budget*0.2&&st!=="idle"?"#f59e0b":"#1f2d3d"}">${sRemain<0?"超"+Math.abs(sRemain).toFixed(1)+"h":st==="idle"?"—":sRemain.toFixed(1)+"h"}</div></div>
+      </div>
+      <div class="sc-bar"><div class="f ${cls[st]}" style="width:${pct}%"></div></div>
+      <div class="sc-time">负责人：${s.owner}<br>${times}</div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("dBody").innerHTML = `
+    ${tabs}
+    <div class="d-summary ${sumCls}">
+      <div class="line">
+        <span><i>发布时间</i>${o.ask}</span>
+        <span><i>预计完成</i>${o.deadline}</span>
+        <span><i>询价师</i>${o.master}</span>
+      </div>
+      <div class="line prog">
+        <span><i>已用时 / 总时长</i><b>${usedTotal.toFixed(1)}h / 27.0h</b></span>
+        <span>剩余 <b style="color:${remain<0?"#e2494f":remain<=5.4?"#f59e0b":"#0f9d6c"}">${remain<0?"超时 "+Math.abs(remain).toFixed(1)+"h":remain.toFixed(1)+"h"}</b></span>
+      </div>
+    </div>
+    ${cards}
+    <div style="font-size:11px;color:#98a2b3;line-height:1.8;margin-top:6px">
+      规则说明：1 分配超 2h 未接单 → 自动催办调度；2 作业耗用达 16h（80%）预警、20h 超时；3 审核达 4h 预警、5h 超时。计时剔除周末/节假日，每日 09:00–18:00 计 9h。
+    </div>`;
+}
+function closeDrawer(){ document.body.classList.remove("drawer-open"); }
+
+renderRows();
+</script>
+</body>
+</html>
