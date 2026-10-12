@@ -1,5 +1,7 @@
-# 广材询价 · 原型发布
+# 原型发布（distribute）
 
-Axure 原型在线预览（GitHub Pages）。
+在线入口：https://Miyako-Leo.github.io/distribute/
 
-在线地址：https://Miyako-Leo.github.io/distribute/
+本轮内容已整合在文件夹：
+
+- [人工询价10月原型文件](https://Miyako-Leo.github.io/distribute/人工询价10月原型文件/)
