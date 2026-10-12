@@ -1,0 +1,69 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <title>P3【询价审核】审核状态并发冲突解决</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <link href="resources/css/axure_rp_page.css" type="text/css" rel="stylesheet"/>
+    <link href="data/styles.css" type="text/css" rel="stylesheet"/>
+    <link href="files/p3【询价审核】审核状态并发冲突解决/styles.css" type="text/css" rel="stylesheet"/>
+    <script src="resources/scripts/jquery-3.7.1.min.js"></script>
+    <script src="resources/scripts/axure/axQuery.js"></script>
+    <script src="resources/scripts/axure/globals.js"></script>
+    <script src="resources/scripts/axutils.js"></script>
+    <script src="resources/scripts/axure/annotation.js"></script>
+    <script src="resources/scripts/axure/axQuery.std.js"></script>
+    <script src="resources/scripts/axure/doc.js"></script>
+    <script src="resources/scripts/messagecenter.js"></script>
+    <script src="resources/scripts/axure/events.js"></script>
+    <script src="resources/scripts/axure/recording.js"></script>
+    <script src="resources/scripts/axure/action.js"></script>
+    <script src="resources/scripts/axure/expr.js"></script>
+    <script src="resources/scripts/axure/geometry.js"></script>
+    <script src="resources/scripts/axure/flyout.js"></script>
+    <script src="resources/scripts/axure/model.js"></script>
+    <script src="resources/scripts/axure/repeater.js"></script>
+    <script src="resources/scripts/axure/sto.js"></script>
+    <script src="resources/scripts/axure/utils.temp.js"></script>
+    <script src="resources/scripts/axure/variables.js"></script>
+    <script src="resources/scripts/axure/drag.js"></script>
+    <script src="resources/scripts/axure/move.js"></script>
+    <script src="resources/scripts/axure/visibility.js"></script>
+    <script src="resources/scripts/axure/style.js"></script>
+    <script src="resources/scripts/axure/adaptive.js"></script>
+    <script src="resources/scripts/axure/tree.js"></script>
+    <script src="resources/scripts/axure/init.temp.js"></script>
+    <script src="resources/scripts/axure/legacy.js"></script>
+    <script src="resources/scripts/axure/viewer.js"></script>
+    <script src="resources/scripts/axure/math.js"></script>
+    <script src="resources/scripts/axure/jquery.nicescroll.min.js"></script>
+    <script src="data/document.js"></script>
+    <script src="files/p3【询价审核】审核状态并发冲突解决/data.js"></script>
+    <script type="text/javascript">
+      $axure.utils.getTransparentGifPath = function() { return 'resources/images/transparent.gif'; };
+      $axure.utils.getOtherPath = function() { return 'resources/Other.html'; };
+      $axure.utils.getReloadPath = function() { return 'resources/reload.html'; };
+    </script>
+  </head>
+  <body>
+    <div id="base" class="">
+
+      <!-- Unnamed (图片) -->
+      <div id="u105" class="ax_default _图片">
+        <img id="u105_img" class="img " src="images/p3【询价审核】审核状态并发冲突解决/u105.png"/>
+        <div id="u105_text" class="text " style="display:none; visibility: hidden">
+          <p></p>
+        </div>
+      </div>
+
+      <!-- Unnamed (矩形) -->
+      <div id="u106" class="ax_default _段落">
+        <div id="u106_div" class=""></div>
+        <div id="u106_text" class="text ">
+          <p><span>问题描述：麻烦看下这个单，因为昨天 16:23刘蕊那边审核通过了，但是我这边昨天显示页面还是待审核，我在16:29时还能打回给询价师，这个单有系统是不是有问题</span></p><p><span><br></span></p><p><span>问题定位：16:23 的&quot;审核通过&quot;是真实生效的（系统里记录了该单 09-22 16:23:47 首次审核通过）。你在 16:29 看到的&quot;待审核&quot;是页面未刷新前的旧状态；基于旧页面提交的&quot;打回&quot;本应被系统拒绝，但系统没有做这个校验，于是把已经审核通过的材料退回了。审核状态并发冲突。用户A打回订单后，用户B在旧页面（缓存状态）操作通过，系统在执行“审核通过”时未实时校验最新状态，导致已打回的订单被错误覆盖为通过。</span></p><p><span><br></span></p><p><span>需求内容：审核操作时，需要实时查询当前的 审核状态，若当前状态不等于 “待审核”，则允许修改，否则不允许本次操作。 系统提示：存在已审核的状态，无法修改！</span></p><p><span><br></span></p>
+        </div>
+      </div>
+    </div>
+    <script src="resources/scripts/axure/ios.js"></script>
+  </body>
+</html>
